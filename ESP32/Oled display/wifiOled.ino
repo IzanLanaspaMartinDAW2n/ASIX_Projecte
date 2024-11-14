@@ -10,8 +10,8 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Configuración de la red WiFi
-const char* ssid = "TU_SSID";
-const char* password = "TU_PASSWORD";
+const char* ssid = "AP_asix";
+const char* password = "AP_asix2023";
 
 void setup() {
   // Iniciar la conexión serial
