@@ -10,9 +10,10 @@
 #include <ESPAsyncWebServer.h>
 #include "index.h"  // Include the index.h file
 
-#define LED_PIN 18  // ESP32 pin GPIO18 connected to LED
+#define LED_PIN 18   // ESP32 pin GPIO18 connected to LED
+#define LED_PIN2 19  // ESP32 pin GPIO19 connected to second LED (for police mode)
 
-const char *ssid = "AP_asix";     // CHANGE IT
+const char *ssid = "AP_asix";     // CHANG
 const char *password = "AP_asix2023";  // CHANGE IT
 
 AsyncWebServer server(80);
@@ -26,10 +27,29 @@ String getHTML() {
   return html;
 }
 
+// Function to handle police mode
+void policeMode() {
+  for (int i = 0; i < 10; i++) {  // Loop for 10 seconds
+    digitalWrite(LED_PIN, HIGH);   // Turn on LED 1
+    digitalWrite(LED_PIN2, LOW);   // Turn off LED 2
+    delay(500);                    // Wait 500 ms
+    digitalWrite(LED_PIN, LOW);    // Turn off LED 1
+    digitalWrite(LED_PIN2, HIGH);  // Turn on LED 2
+    delay(500);                    // Wait 500 ms
+  }
+  // Turn off both LEDs after the mode ends
+  digitalWrite(LED_PIN, LOW);
+  digitalWrite(LED_PIN2, LOW);
+}
+
 void setup() {
   Serial.begin(9600);
+
+  // Set pins as outputs
   pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_PIN2, OUTPUT);
   digitalWrite(LED_PIN, LED_state);
+  digitalWrite(LED_PIN2, LOW);
 
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
@@ -43,14 +63,14 @@ void setup() {
   Serial.print("ESP32 Web Server's IP address: ");
   Serial.println(WiFi.localIP());
 
-  // home page
+  // Home page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     Serial.println("ESP32 Web Server: New request received:");
     Serial.println("GET /");
     request->send(200, "text/html", getHTML());
   });
 
-  // Route to control the LED
+  // Route to turn LED on
   server.on("/led1/on", HTTP_GET, [](AsyncWebServerRequest *request) {
     Serial.println("ESP32 Web Server: New request received:");
     Serial.println("GET /led1/on");
@@ -58,6 +78,8 @@ void setup() {
     digitalWrite(LED_PIN, LED_state);
     request->send(200, "text/html", getHTML());
   });
+
+  // Route to turn LED off
   server.on("/led1/off", HTTP_GET, [](AsyncWebServerRequest *request) {
     Serial.println("ESP32 Web Server: New request received:");
     Serial.println("GET /led1/off");
@@ -66,10 +88,18 @@ void setup() {
     request->send(200, "text/html", getHTML());
   });
 
+  // Route to activate police mode
+  server.on("/led/police", HTTP_GET, [](AsyncWebServerRequest *request) {
+    Serial.println("ESP32 Web Server: New request received:");
+    Serial.println("GET /led/police");
+    request->send(200, "text/html", getHTML());  // Send the current page first
+    policeMode();  // Execute police mode
+  });
+
   // Start the server
   server.begin();
 }
 
 void loop() {
-  // Your code here
+  // Empty loop as the server handles requests asynchronously
 }
