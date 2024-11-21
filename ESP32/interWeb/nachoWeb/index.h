@@ -69,7 +69,7 @@ const char* webpage = R"=====(
       <div class="buttons">
         <a href="/led1/on">Encender</a>
         <a href="/led1/off">Apagar</a>
-        <a href="/led1/blink">Modo police</a>
+        <a href="/led/police">Modo police</a>
       </div>
     </div>
   </body>
