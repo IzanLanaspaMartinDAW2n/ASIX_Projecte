@@ -1,35 +1,39 @@
-/*
- * This ESP32 code is created by esp32io.com
- *
- * This ESP32 code is released in the public domain
- *
- * For more detail (instruction and wiring diagram), visit https://esp32io.com/tutorials/esp32-controls-led-via-web
- */
-
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include "index.h"  // Include the index.h file
 
-#define LED_PIN 18  // ESP32 pin GPIO18 connected to LED
+#define RED_LED_PIN 18    // ESP32 pin GPIO18 connected to Red LED
+#define BLUE_LED_PIN 19   // ESP32 pin GPIO19 connected to Blue LED
 
 const char *ssid = "AP_asix";     // CHANGE IT
 const char *password = "AP_asix2023";  // CHANGE IT
 
 AsyncWebServer server(80);
 
-int LED_state = LOW;
+int currentTemperature = 18;  // Initial temperature
 
 String getHTML() {
-  String html = webpage;                                  // Use the HTML content from the index.h file
-  html.replace("%LED_STATE%", LED_state ? "ON" : "OFF");  // update the led state
+  String html = webpage;  // Use the HTML content from the index.h file
+  html.replace("%TEMPERATURE%", String(currentTemperature));  // update the temperature
 
   return html;
 }
 
+void controlLEDs() {
+  if (currentTemperature >= 16) {
+    digitalWrite(RED_LED_PIN, HIGH);
+    digitalWrite(BLUE_LED_PIN, LOW);
+  } else {
+    digitalWrite(RED_LED_PIN, LOW);
+    digitalWrite(BLUE_LED_PIN, HIGH);
+  }
+}
+
 void setup() {
   Serial.begin(9600);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LED_state);
+  pinMode(RED_LED_PIN, OUTPUT);
+  pinMode(BLUE_LED_PIN, OUTPUT);
+  controlLEDs();
 
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
@@ -43,26 +47,22 @@ void setup() {
   Serial.print("ESP32 Web Server's IP address: ");
   Serial.println(WiFi.localIP());
 
-  // home page
+  // Home page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Serial.println("ESP32 Web Server: New request received:");
-    Serial.println("GET /");
     request->send(200, "text/html", getHTML());
   });
 
-  // Route to control the LED
-  server.on("/led1/on", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Serial.println("ESP32 Web Server: New request received:");
-    Serial.println("GET /led1/on");
-    LED_state = HIGH;
-    digitalWrite(LED_PIN, LED_state);
+  // Route to increase temperature
+  server.on("/increase", HTTP_GET, [](AsyncWebServerRequest *request) {
+    currentTemperature++;
+    controlLEDs();
     request->send(200, "text/html", getHTML());
   });
-  server.on("/led1/off", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Serial.println("ESP32 Web Server: New request received:");
-    Serial.println("GET /led1/off");
-    LED_state = LOW;
-    digitalWrite(LED_PIN, LED_state);
+
+  // Route to decrease temperature
+  server.on("/decrease", HTTP_GET, [](AsyncWebServerRequest *request) {
+    currentTemperature--;
+    controlLEDs();
     request->send(200, "text/html", getHTML());
   });
 
