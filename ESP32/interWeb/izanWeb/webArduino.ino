@@ -49,6 +49,8 @@ void setup() {
 
   // Home page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    Serial.println("ESP32 Web Server: New request received:");
+    Serial.println("GET /");
     request->send(200, "text/html", getHTML());
   });
 
