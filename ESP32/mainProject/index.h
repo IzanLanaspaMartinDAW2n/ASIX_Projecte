@@ -1,3 +1,15 @@
+/*
+ * This ESP32 code is created by esp32io.com
+ *
+ * This ESP32 code is released in the public domain
+ *
+ * For more detail (instruction and wiring diagram), visit https://esp32io.com/tutorials/esp32-controls-led-via-web
+ */
+
+#ifndef WEBPAGE_H
+#define WEBPAGE_H
+
+const char* webpage = R"=====(
 <!DOCTYPE html>
 <html>
   <head>
@@ -57,9 +69,12 @@
       <div class="buttons">
         <a href="/led1/on">Encender</a>
         <a href="/led1/off">Apagar</a>
-        <a href="/led1/blink">Parpadeo</a>
+        <a href="/led/police">Modo police</a>
         <a href="/buzzer">Zumbador</a>
       </div>
     </div>
   </body>
 </html>
+)=====";
+
+#endif
