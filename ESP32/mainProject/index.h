@@ -65,7 +65,7 @@ const char* webpage = R"=====(
   <body>
     <div class="card">
       <h1>ESP32 LED</h1>
-      <p>Estado del LED: <span style="color: red">%LED_STATE%</span></p>
+      <p>Estado del LED: <span style="color: red">%MODE%</span></p>
       <div class="buttons">
         <a href="/led1/on">Encender</a>
         <a href="/led1/off">Apagar</a>
