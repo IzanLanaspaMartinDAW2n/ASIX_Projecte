@@ -14,64 +14,69 @@ const char* webpage = R"=====(
 <html>
   <head>
     <link rel="icon" href="data:," />
+    <title>COOKTECH</title>
     <style>
       body {
         font-family: Arial, sans-serif;
-        background-color: grey;
-        color: white;
+        background-color: #f2f2f2;
+        color: #333;
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-top: 30%;
+        height: 100vh;
+        margin: 0;
       }
       .card {
-        background-color: #1e1e1e;
+        background-color: #ffffff;
         padding: 20px;
         border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         text-align: center;
-        width: 90%;
-        max-width: 700px;
+        width: 300px;
       }
       .card h1 {
         margin-bottom: 20px;
         font-size: 24px;
-        color: #00d1ff;
+        color: #007bff;
       }
       .card p {
+        margin-bottom: 10px;
         font-size: 18px;
-        margin-bottom: 20px;
       }
-      .buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      a {
-        display: block;
+      input[type="number"], input[type="submit"] {
         padding: 10px;
-        text-decoration: none;
-        color: white;
-        background-color: #007bff;
-        border-radius: 5px;
-        text-align: center;
-        transition: background-color 0.3s;
+        margin: 10px 0;
+        width: 100%;
+        box-sizing: border-box;
       }
-      a:hover {
+      input[type="submit"] {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      input[type="submit"]:hover {
         background-color: #0056b3;
       }
     </style>
   </head>
   <body>
     <div class="card">
-      <h1>ESP32 LED</h1>
-      <p>Estado del LED: <span style="color: red">%MODE%</span></p>
-      <div class="buttons">
-        <a href="/led1/on">Encender</a>
-        <a href="/led1/off">Apagar</a>
-        <a href="/led/police">Modo police</a>
-        <a href="/buzzer">Zumbador</a>
-      </div>
+      <h1>COOKTECH</h1>
+      <p>Modo TERMOSTATO</p>
+      <form action="/thermostat" method="get">
+        <label for="temp">Temperatura objetivo (&deg;C):</label>
+        <input type="number" id="temp" name="temp" min="10" max="100" required />
+        <input type="submit" value="Iniciar Termostato" />
+      </form>
+      <hr>
+      <p>Modo COOK</p>
+      <form action="/cook" method="get">
+        <label for="time">Tiempo de cocci&oacute;n (min):</label>
+        <input type="number" id="time" name="time" min="1" max="60" required />
+        <input type="submit" value="Iniciar Temporizador" />
+      </form>
     </div>
   </body>
 </html>

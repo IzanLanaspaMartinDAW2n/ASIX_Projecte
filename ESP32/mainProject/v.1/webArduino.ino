@@ -3,179 +3,146 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <DHT.h>
 
 #include "index.h"
-#include "notasMusicales.h"
 
-#define LED_PIN 18   // ESP32 pin GPIO18 connected to LED
-#define LED_PIN2 19  // ESP32 pin GPIO19 connected to second LED (for police mode)
-#define BUZZER_PIN 16  
+#define LED_BLUE 19      // LED azul GPIO 19
+#define LED_RED 18       // LED rojo GPIO 16
+#define BUZZER_PIN 16     // Zumbador GPIO 5
+#define DHTPIN 17         // Sensor de temperatura GPIO 4
+#define DHTTYPE DHT11
 
-#define SCREEN_WIDTH 128 // OLED width,  in pixels
-#define SCREEN_HEIGHT 64 // OLED height, in pixels
+const char *ssid = "AP_asix";
+const char *password = "AP_asix2023";
 
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-
-const char *ssid = "AP_asix";     // CHANG
-const char *password = "AP_asix2023";  // CHANGE IT
-
 AsyncWebServer server(80);
+DHT dht(DHTPIN, DHTTYPE);
 
-// Variable to track the current mode
-String mode = "OFF";
+float targetTemp = 0;   // Temperatura objetivo
+unsigned long timerDuration = 0;  // Tiempo objetivo en ms
+unsigned long cookTimerStart = 0;     // Marca de tiempo inicial
+bool isCooking = false;           // Estado del temporizador
 
-void updateOLED() {
-  oled.clearDisplay();          // Clear the screen
-  oled.setTextSize(1);          // Set text size
-  oled.setTextColor(WHITE);     // Set text color
-  oled.setCursor(0, 2);         // Set cursor to start position
-  oled.println("Current Mode:"); // Print a label
-  oled.setCursor(0, 20);        // Move cursor down
-  oled.println(mode);           // Print the current mode
-  oled.display();               // Update the display
+String mode = "IDLE";
+
+void updateOLED(String message) {
+  oled.clearDisplay();
+  oled.setTextSize(1);
+  oled.setTextColor(WHITE);
+  oled.setCursor(0, 10);
+  oled.println("COOKTECH");
+  oled.setCursor(0, 30);
+  oled.println(message);
+  oled.display();
+}
+
+float readTemperatureWithRetry() {
+  float temp;
+  for (int i = 0; i < 5; i++) {  // Reintenta hasta 5 veces
+    temp = dht.readTemperature();
+    if (!isnan(temp)) return temp;  // Devuelve la lectura válida
+    delay(500);  // Espera antes de reintentar
+  }
+  return NAN;  // Si todas las lecturas fallan
+}
+
+void checkTemperature() {
+  float currentTemp = readTemperatureWithRetry();
+  if (isnan(currentTemp)) return;
+
+  if (currentTemp >= targetTemp && targetTemp > 0) {
+    digitalWrite(LED_RED, HIGH);
+    digitalWrite(LED_BLUE, LOW);
+    tone(BUZZER_PIN, 1000);
+    updateOLED("ALERTA: Temp alcanzada!");
+  } else {
+    digitalWrite(LED_BLUE, HIGH);
+    digitalWrite(LED_RED, LOW);
+    noTone(BUZZER_PIN);
+    updateOLED("Temp: " + String(currentTemp) + " C");
+  }
+}
+
+void handleCookTimer() {
+  if (!isCooking) return;
+
+  unsigned long elapsed = millis() - cookTimerStart;
+  unsigned long remaining = timerDuration - elapsed;
+
+  if (remaining <= 0) {
+    isCooking = false;
+    tone(BUZZER_PIN, 1000, 3000);
+    updateOLED("Tiempo Finalizado!");
+    for (int i = 0; i < 10; i++) {
+      digitalWrite(LED_RED, !digitalRead(LED_RED));
+      delay(500);
+    }
+  } else {
+    updateOLED("Cuenta atras: " + String(remaining / 1000) + "s");
+  }
 }
 
 String getHTML() {
   String html = webpage;                                  
-  html.replace("%MODE%", mode);  // Update the mode status
   return html;
 }
 
-// Function to handle police mode
-void policeMode() {
-  mode = "POLICE";
-  updateOLED();
-  for (int i = 0; i < 10; i++) {  // Loop for 10 seconds
-    digitalWrite(LED_PIN, HIGH);   // Turn on LED 1
-    digitalWrite(LED_PIN2, LOW);   // Turn off LED 2
-    delay(500);                    // Wait 500 ms
-    digitalWrite(LED_PIN, LOW);    // Turn off LED 1
-    digitalWrite(LED_PIN2, HIGH);  // Turn on LED 2
-    delay(500);                    // Wait 500 ms
-  }
-  // Turn off both LEDs after the mode ends
-  digitalWrite(LED_PIN, LOW);
-  digitalWrite(LED_PIN2, LOW);
-  mode = "OFF";
-  updateOLED();
-}
-
-void activateBuzzer() {
-  mode = "BUZZER";
-  updateOLED();
-  unsigned long startTime = millis(); 
-  while (millis() - startTime < 3000) { 
-    digitalWrite(BUZZER_PIN, HIGH);  
-    delay(500);                      
-    digitalWrite(BUZZER_PIN, LOW);   
-    delay(500);                      
-  }
-  mode = "OFF";
-  updateOLED();
-}
-int melody[] = {
-  NOTE_E7, NOTE_G7, NOTE_A7, NOTE_F7, NOTE_G7, NOTE_E7,
-  NOTE_C7, NOTE_D7, NOTE_B7, NOTE_G7, NOTE_F7, NOTE_E7, NOTE_A7, NOTE_G7,
-};
-
-// Duración de las notas (4 = negra, 8 = corchea, etc.)
-int noteDurations[] = {
-  4, 8, 8, 4, 4, 4,
-  4, 8, 8, 4, 8, 8, 4, 4
-};
-
-void playHarryPotter() {
-  mode = "Harry";
-   updateOLED();
-  for (int thisNote = 0; thisNote < sizeof(melody) / sizeof(melody[0]); thisNote++) {
-    int noteDuration = 1000 / noteDurations[thisNote];
-    tone(BUZZER_PIN, melody[thisNote], noteDuration);
-
-    int pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
-    noTone(BUZZER_PIN);
-  }
-  mode = "OFF";
-  updateOLED();
-}
-void initSetup(){
+void setup() {
   Serial.begin(9600);
-  // Set pins as outputs
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(LED_PIN2, OUTPUT);
+  dht.begin();
+  pinMode(LED_BLUE, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
- 
-  digitalWrite(LED_PIN, LOW);
-  digitalWrite(LED_PIN2, LOW);
-  digitalWrite(BUZZER_PIN, LOW);
-
+  digitalWrite(LED_BLUE, LOW);
+  digitalWrite(LED_RED, LOW);
+  
   if (!oled.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("failed to start SSD1306 OLED"));
+    Serial.println("OLED no encontrado");
     while (1);
   }
-  // Initialize the display with the default mode
-  updateOLED();
+  updateOLED("Esperando...");
 
-  // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
-    Serial.println("Connecting to WiFi...");
+    Serial.println("Conectando...");
   }
-  Serial.println("Connected to WiFi");
+  Serial.println("Conectado");
 
-  // Print the ESP32's IP address
-  Serial.print("ESP32 Web Server's IP address: ");
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+  request->send(200, "text/html", getHTML());
+});
+
+  server.on("/thermostat", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("temp")) {
+      targetTemp = request->getParam("temp")->value().toFloat();
+      mode = "TERMOSTATO";
+      updateOLED("Modo Termostato: " + String(targetTemp) + "C");
+    }
+    request->send(200, "text/plain", "Modo Termostato activado");
+  });
+
+  server.on("/cook", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("time")) {
+      timerDuration = request->getParam("time")->value().toInt() * 60000;
+      cookTimerStart = millis();
+      isCooking = true;
+      mode = "COOK";
+      updateOLED("Modo Cook: " + String(timerDuration / 60000) + " min");
+    }
+    request->send(200, "text/plain", "Modo Cook activado");
+  });
+
+  server.begin();
+  updateOLED("Servidor listo");
   Serial.println(WiFi.localIP());
 }
 
-void serverGetters(){
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Serial.println("ESP32 Web Server: New request received:");
-    Serial.println("GET /");
-    request->send(200, "text/html", getHTML());
-  });
-
-  // Route to turn LED on
-  server.on("/led1/on", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Serial.println("ESP32 Web Server: New request received:");
-    Serial.println("GET /led1/on");
-    mode = "ON";
-    digitalWrite(LED_PIN, HIGH);
-    updateOLED();
-    request->send(200, "text/html", getHTML());
-  });
-
-  // Route to turn LED off
-  server.on("/led1/off", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Serial.println("ESP32 Web Server: New request received:");
-    Serial.println("GET /led1/off");
-    mode = "OFF";
-    digitalWrite(LED_PIN, LOW);
-    updateOLED();
-    request->send(200, "text/html", getHTML());
-  });
-
-  // Route to activate police mode
-  server.on("/led/police", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Serial.println("ESP32 Web Server: New request received:");
-    Serial.println("GET /led/police");
-    request->send(200, "text/html", getHTML());  // Send the current page first
-    policeMode();  // Execute police mode
-  });
-
-  server.on("/buzzer", HTTP_GET, [](AsyncWebServerRequest *request) {
-    Serial.println("GET /buzzer");
-    playHarryPotter();  
-    request->send(200, "text/html", getHTML());
-  });
-}
-
-void setup() {
-  initSetup();
-  serverGetters();
-  server.begin(); 
-}
-
 void loop() {
+  if (mode == "TERMOSTATO") checkTemperature();
+  if (mode == "COOK") handleCookTimer();
 }
