@@ -83,14 +83,29 @@
         width: 100%;
         box-sizing: border-box;
       }
-      input[type="submit"] {
+      input[type="submit"],
+      button {
         background-color: #007bff;
         color: white;
-        cursor: pointer;
         font-weight: bold;
+        cursor: pointer;
+        border: none;
       }
-      input[type="submit"]:hover {
+      input[type="submit"]:hover,
+      button:hover {
         background-color: #0056b3;
+      }
+      button {
+        padding: 10px;
+        border-radius: 5px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      #camera-image {
+        max-width: 100%;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        margin-top: 20px;
       }
       @media screen and (max-width: 1100px) {
         .flex-container {
@@ -152,11 +167,16 @@
             />
             <input type="submit" value="Establecer IP" />
           </form>
-          <form action="/camera" method="get">
-            <input type="submit" value="Capturar Foto desde Cámara" />
-          </form>
+          <br />
+          <button onclick="capturePhoto()">Capturar Foto desde Cámara</button>
         </div>
       </div>
+      <img
+        id="camera-image"
+        src=""
+        alt="Foto capturada"
+        style="visibility: hidden"
+      />
       <div class="citation">
         <p>
           Designed by
@@ -164,5 +184,12 @@
         </p>
       </div>
     </div>
+    <script>
+      function capturePhoto() {
+        const img = document.getElementById("camera-image");
+        img.src = "/camera?cacheBuster=" + new Date().getTime();
+        img.style.visibility = "visible";
+      }
+    </script>
   </body>
 </html>
